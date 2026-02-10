@@ -1,0 +1,18 @@
+{
+  "project": {
+    "name": "lerobot-iot",
+    "environment": "dev"
+  },
+  "iot": {
+    "deviceId": "arm-001",
+    "topicPrefix": "dt/lerobot"
+  },
+  "component": {
+    "name": "com.lerobot.telemetry",
+    "version": "1.0.0",
+    "pollingRateHz": 10
+  },
+  "greengrass": {
+    "nucleusVersion": "2.14.2"
+  }
+}

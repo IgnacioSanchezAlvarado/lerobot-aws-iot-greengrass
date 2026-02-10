@@ -1,0 +1,4 @@
+lerobot SO-101 arm connection to AWS IoT core. Sensors reads sent in real time to the cloud.
+Integration flow: ros2 -> IoT greengrass -> AWS IoT core.
+Workflow: I want a repo that a user can clone on a ros2 installed environment, then connect its lerobot robot (let's focus on so-101 arm, but can be others) and automatically ingest all the sensors readings into AWS iot core.
+Research on the best way of implementing this workload. We can use other AWS services if better. Also research on existing solutions (open-source, github repos etc) for lerobot-ros2 integraiton.

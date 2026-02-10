@@ -1,0 +1,52 @@
+---
+RecipeFormatVersion: "2020-01-25"
+ComponentName: com.lerobot.telemetry
+ComponentVersion: "1.0.0"
+ComponentDescription: "LeRobot SO-101 telemetry publisher to AWS IoT Core"
+ComponentPublisher: "AWS Solutions Architect"
+ComponentConfiguration:
+  DefaultConfiguration:
+    deviceId: "arm-001"
+    topicPrefix: "dt/lerobot"
+    pollingRateHz: 10
+    serialPort: "/dev/ttyUSB0"
+    mockMode: false
+    accessControl:
+      aws.greengrass.ipc.pubsub:
+        "com.lerobot.telemetry:pubsub:1":
+          policyDescription: "Allows publishing telemetry to IPC pubsub"
+          operations:
+            - "aws.greengrass#PublishToTopic"
+            - "aws.greengrass#SubscribeToTopic"
+          resources:
+            - "dt/lerobot/*"
+      aws.greengrass.ipc.mqttproxy:
+        "com.lerobot.telemetry:mqttproxy:1":
+          policyDescription: "Allows publishing telemetry to IoT Core"
+          operations:
+            - "aws.greengrass#PublishToIoTCore"
+          resources:
+            - "dt/lerobot/*"
+ComponentDependencies:
+  aws.greengrass.Nucleus:
+    VersionRequirement: ">=2.0.0"
+    DependencyType: HARD
+Manifests:
+  - Platform:
+      os: linux
+    Lifecycle:
+      Install:
+        Script: |-
+          pip3 install -r {artifacts:decompressedPath}/lerobot-telemetry/requirements.txt
+      Run:
+        Script: |-
+          export PYTHONPATH={artifacts:decompressedPath}/lerobot-telemetry:$PYTHONPATH
+          export GG_DEVICE_ID={configuration:/deviceId}
+          export GG_TOPIC_PREFIX={configuration:/topicPrefix}
+          export GG_POLLING_RATE_HZ={configuration:/pollingRateHz}
+          export GG_SERIAL_PORT={configuration:/serialPort}
+          export GG_MOCK_MODE={configuration:/mockMode}
+          python3 -u -m lerobot_telemetry
+    Artifacts:
+      - URI: s3://BUCKET_NAME/COMPONENT_NAME/COMPONENT_VERSION/lerobot-telemetry.zip
+        Unarchive: ZIP
