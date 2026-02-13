@@ -5,4 +5,4 @@ Reads sensor data from all 6 servo motors (Feetech STS3215) and publishes
 to AWS IoT Core via Greengrass IPC.
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

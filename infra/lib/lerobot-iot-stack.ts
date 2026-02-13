@@ -113,10 +113,14 @@ export class LeRobotIotStack extends cdk.Stack {
         ComponentConfiguration: {
           DefaultConfiguration: {
             pollingRateHz: config.component.pollingRateHz,
-            telemetryTopic: `${config.iot.topicPrefix}/${config.iot.deviceId}/telemetry`,
+            topicPrefix: config.iot.topicPrefix,
             deviceId: config.iot.deviceId,
             serialPort: '/dev/ttyUSB0',
             mockMode: 'false',
+            ros2NodeName: config.ros2.nodeName,
+            ros2JointStatesTopic: config.ros2.jointStatesTopic,
+            ros2ServoDiagnosticsTopic: config.ros2.servoDiagnosticsTopic,
+            ros2Distro: config.ros2.distro,
             accessControl: {
               'aws.greengrass.ipc.mqttproxy': {
                 [`${config.component.name}:pubsub:1`]: {
@@ -140,15 +144,24 @@ export class LeRobotIotStack extends cdk.Stack {
             },
             Lifecycle: {
               Install: {
-                Script: 'pip3 install -r {artifacts:decompressedPath}/requirements.txt',
+                Script: [
+                  'source /opt/ros/${ROS_DISTRO:-humble}/setup.bash 2>/dev/null || true',
+                  'pip3 install -r {artifacts:decompressedPath}/requirements.txt',
+                ].join('\n'),
               },
               Run: {
                 Script: [
+                  'source /opt/ros/${ROS_DISTRO:-humble}/setup.bash 2>/dev/null || echo "ROS2 not found, running without ROS2 support"',
                   'export GG_DEVICE_ID="{configuration:/deviceId}"',
-                  'export GG_TOPIC_PREFIX="$(echo \'{configuration:/telemetryTopic}\' | sed \'s|/[^/]*$||\')"',
+                  'export GG_TOPIC_PREFIX="{configuration:/topicPrefix}"',
                   'export GG_POLLING_RATE_HZ="{configuration:/pollingRateHz}"',
                   'export GG_SERIAL_PORT="{configuration:/serialPort}"',
                   'export GG_MOCK_MODE="{configuration:/mockMode}"',
+                  'export GG_ROS2_NODE_NAME="{configuration:/ros2NodeName}"',
+                  'export GG_ROS2_JOINT_STATES_TOPIC="{configuration:/ros2JointStatesTopic}"',
+                  'export GG_ROS2_SERVO_DIAGNOSTICS_TOPIC="{configuration:/ros2ServoDiagnosticsTopic}"',
+                  'export GG_ROS2_DISTRO="{configuration:/ros2Distro}"',
+                  'export ROS_DISTRO="{configuration:/ros2Distro}"',
                   'export PYTHONPATH="{artifacts:decompressedPath}:$PYTHONPATH"',
                   'cd {artifacts:decompressedPath}',
                   'python3 -u -m lerobot_telemetry',
@@ -189,9 +202,13 @@ export class LeRobotIotStack extends cdk.Stack {
           configurationUpdate: {
             merge: JSON.stringify({
               pollingRateHz: config.component.pollingRateHz,
-              telemetryTopic: `${config.iot.topicPrefix}/${config.iot.deviceId}/telemetry`,
+              topicPrefix: config.iot.topicPrefix,
               deviceId: config.iot.deviceId,
               serialPort: '/dev/ttyUSB0',
+              ros2NodeName: config.ros2.nodeName,
+              ros2JointStatesTopic: config.ros2.jointStatesTopic,
+              ros2ServoDiagnosticsTopic: config.ros2.servoDiagnosticsTopic,
+              ros2Distro: config.ros2.distro,
             }),
           },
         },

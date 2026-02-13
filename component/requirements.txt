@@ -1,2 +1,11 @@
 awsiotsdk>=1.21.0
 pyserial>=3.5
+
+# ROS2 dependencies (provided by system ROS2 installation, not pip-installable):
+# - rclpy
+# - sensor_msgs
+# - diagnostic_msgs
+# - builtin_interfaces
+#
+# Install ROS2 Humble: https://docs.ros.org/en/humble/Installation.html
+# The component falls back to non-ROS2 mode if these are not available.

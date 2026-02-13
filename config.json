@@ -9,8 +9,14 @@
   },
   "component": {
     "name": "com.lerobot.telemetry",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "pollingRateHz": 10
+  },
+  "ros2": {
+    "nodeName": "lerobot_telemetry",
+    "jointStatesTopic": "/joint_states",
+    "servoDiagnosticsTopic": "/servo_diagnostics",
+    "distro": "humble"
   },
   "greengrass": {
     "nucleusVersion": "2.14.2"

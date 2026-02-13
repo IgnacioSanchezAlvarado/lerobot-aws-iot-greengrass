@@ -49,6 +49,10 @@ class ComponentConfig:
     polling_rate_hz: int
     serial_port: str
     mock_mode: bool
+    ros2_node_name: str = "lerobot_telemetry"
+    ros2_joint_states_topic: str = "/joint_states"
+    ros2_servo_diagnostics_topic: str = "/servo_diagnostics"
+    ros2_distro: str = "humble"
 
 
 def load_config() -> ComponentConfig:
@@ -61,6 +65,10 @@ def load_config() -> ComponentConfig:
     - GG_POLLING_RATE_HZ
     - GG_SERIAL_PORT
     - GG_MOCK_MODE
+    - GG_ROS2_NODE_NAME
+    - GG_ROS2_JOINT_STATES_TOPIC
+    - GG_ROS2_SERVO_DIAGNOSTICS_TOPIC
+    - GG_ROS2_DISTRO
 
     Returns:
         ComponentConfig instance
@@ -71,6 +79,10 @@ def load_config() -> ComponentConfig:
     parser.add_argument("--polling-rate", type=int, help="Polling rate in Hz")
     parser.add_argument("--serial-port", help="Serial port (e.g., /dev/ttyUSB0)")
     parser.add_argument("--mock", action="store_true", help="Use mock sensor data")
+    parser.add_argument("--ros2-node-name", help="ROS2 node name")
+    parser.add_argument("--ros2-joint-states-topic", help="ROS2 joint_states topic")
+    parser.add_argument("--ros2-servo-diagnostics-topic", help="ROS2 servo diagnostics topic")
+    parser.add_argument("--ros2-distro", help="ROS2 distribution (e.g., humble)")
 
     args = parser.parse_args()
 
@@ -83,10 +95,20 @@ def load_config() -> ComponentConfig:
     # Handle mock mode (env var is string "true"/"false")
     mock_mode = args.mock or os.getenv("GG_MOCK_MODE", "false").lower() == "true"
 
+    # ROS2 configuration
+    ros2_node_name = args.ros2_node_name or os.getenv("GG_ROS2_NODE_NAME", "lerobot_telemetry")
+    ros2_joint_states_topic = args.ros2_joint_states_topic or os.getenv("GG_ROS2_JOINT_STATES_TOPIC", "/joint_states")
+    ros2_servo_diagnostics_topic = args.ros2_servo_diagnostics_topic or os.getenv("GG_ROS2_SERVO_DIAGNOSTICS_TOPIC", "/servo_diagnostics")
+    ros2_distro = args.ros2_distro or os.getenv("GG_ROS2_DISTRO", "humble")
+
     return ComponentConfig(
         device_id=device_id,
         topic_prefix=topic_prefix,
         polling_rate_hz=polling_rate_hz,
         serial_port=serial_port,
         mock_mode=mock_mode,
+        ros2_node_name=ros2_node_name,
+        ros2_joint_states_topic=ros2_joint_states_topic,
+        ros2_servo_diagnostics_topic=ros2_servo_diagnostics_topic,
+        ros2_distro=ros2_distro,
     )

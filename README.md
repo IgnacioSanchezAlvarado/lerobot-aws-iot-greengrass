@@ -1,6 +1,6 @@
 # LeRobot SO-101 AWS IoT Integration
 
-Stream servo sensor data from a LeRobot SO-101 robotic arm to AWS IoT Core via Greengrass v2. A single Greengrass component reads position, velocity, load, temperature, and current from all 6 servo motors and publishes JSON telemetry over MQTT.
+Stream servo sensor data from a LeRobot SO-101 robotic arm to AWS IoT Core via Greengrass v2. The component also runs as a ROS2 node, publishing standard JointState and DiagnosticArray messages for local ROS2 ecosystem integration.
 
 ## Prerequisites
 
@@ -10,6 +10,7 @@ Stream servo sensor data from a LeRobot SO-101 robotic arm to AWS IoT Core via G
 - Java 11+ (for Greengrass installer)
 - Python 3.12 (for component runtime)
 - LeRobot SO-101 arm connected via USB serial (for device setup)
+- ROS2 Humble (optional, for local ROS2 topic publishing) — [Installation guide](https://docs.ros.org/en/humble/Installation.html)
 
 ## Configuration
 
@@ -27,8 +28,14 @@ Edit `config.json` before deployment:
   },
   "component": {
     "name": "com.lerobot.telemetry",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "pollingRateHz": 10
+  },
+  "ros2": {
+    "nodeName": "lerobot_telemetry",
+    "jointStatesTopic": "/joint_states",
+    "servoDiagnosticsTopic": "/servo_diagnostics",
+    "distro": "humble"
   },
   "greengrass": {
     "nucleusVersion": "2.14.2"
@@ -86,6 +93,29 @@ sudo tail -f /greengrass/v2/logs/com.lerobot.telemetry.log
 
 ```bash
 ./scripts/test-telemetry.sh
+```
+
+### Verify ROS2 Topics (if ROS2 installed)
+
+The component publishes ROS2 topics on the default DDS domain. From another terminal on the same machine:
+
+```bash
+source /opt/ros/humble/setup.bash
+
+ros2 topic list
+# Should show /joint_states and /servo_diagnostics
+
+ros2 topic echo /joint_states
+# Should show JointState messages at configured rate
+
+ros2 topic echo /servo_diagnostics
+# Should show DiagnosticArray messages with servo temperature/current
+```
+
+If topics don't appear, check the component log for ROS2 initialization status:
+
+```bash
+sudo grep -i "ros2\|rclpy" /greengrass/v2/logs/com.lerobot.telemetry.log
 ```
 
 ### View Messages in AWS Console
@@ -176,19 +206,22 @@ Edit component configuration in Greengrass deployment to set `mockMode: true` fo
 ## Architecture
 
 ```
-Robot Host                           AWS Cloud
+Robot Host (ROS2)                    AWS Cloud
 +---------------------------------+  +---------------------------+
 |                                 |  |                           |
 | LeRobot SO-101                  |  | AWS IoT Core              |
-| (6x Feetech STS3215 servos)     |  |   MQTT Broker             |
+| (6x Feetech STS3215 servos)    |  |   MQTT Broker             |
 |      |                          |  |                           |
 |      v                          |  | Topic:                    |
 | Greengrass Component:           |  | dt/lerobot/+/telemetry    |
-| lerobot-telemetry               |  |                           |
-| (reads sensors, publishes JSON) | MQTT | IoT Rules (optional)      |
-|      |                          |---->| route to S3, Timestream,  |
-| Greengrass Core v2              | TLS  | Lambda, etc.              |
-| (nucleus, MQTT bridge)          |  |                           |
+| lerobot-telemetry (ROS2 node)   |  |                           |
+|  +----------+---------+         |  | IoT Rules (optional)      |
+|  | ROS2     | IoT IPC |         |  | route to S3, Timestream,  |
+|  | topics   | bridge  |-------->|  | Lambda, etc.              |
+|  v          v         |    TLS  |  |                           |
+| /joint_states         |         |  |                           |
+| /servo_diagnostics    |         |  |                           |
+| Greengrass Core v2              |  |                           |
 +---------------------------------+  +---------------------------+
 ```
 
