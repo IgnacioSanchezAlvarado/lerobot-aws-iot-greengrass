@@ -2,26 +2,29 @@
 
 ## Summary
 
-Connect a LeRobot SO-101 robotic arm to AWS IoT Core via Greengrass v2. A single Greengrass component reads servo sensor data using the LeRobot Python API and publishes it to IoT Core over MQTT. That's it.
+Connect a LeRobot SO-101 robotic arm to AWS IoT Core via Greengrass v2. A single Greengrass component reads servo sensor data using the LeRobot Python API and publishes it to IoT Core over MQTT. The component is also a ROS2 node that publishes to standard ROS2 topics (`/joint_states`, `/servo_diagnostics`), enabling local integration with ROS2-based robotics tools and simulators.
 
 Greengrass v2 provides the edge runtime: device identity, MQTT connectivity, store-and-forward, component lifecycle, and a foundation for future edge ML.
 
 ```
-Robot Host                                  AWS Cloud
-+------------------------------------+      +-------------------------+
-|                                    |      |                         |
-|  LeRobot SO-101                    |      |  AWS IoT Core           |
-|  (6x Feetech STS3215, USB serial) |      |    MQTT Broker          |
-|       |                            |      |                         |
-|       v                            |      |  Receives messages on:  |
-|  Greengrass Component:             |      |  dt/lerobot/+/telemetry |
-|  lerobot-telemetry                 |      |                         |
-|  (Python: reads sensors,           | MQTT |  IoT Rules can route    |
-|   publishes to IoT Core via IPC)   |----->|  to any AWS service     |
-|       |                            | TLS  |  (Timestream, S3, etc.) |
-|  Greengrass Core v2                |      |  when needed later      |
-|  (nucleus, MQTT bridge)            |      |                         |
-+------------------------------------+      +-------------------------+
+Robot Host (ROS2 installed)                AWS Cloud
++------------------------------------+    +-------------------------+
+|                                    |    |                         |
+|  LeRobot SO-101                    |    |  AWS IoT Core           |
+|  (6x Feetech STS3215, USB serial) |    |    MQTT Broker          |
+|       |                            |    |                         |
+|       v                            |    |  Receives messages on:  |
+|  Greengrass Component:             |    |  dt/lerobot/+/telemetry |
+|  lerobot-telemetry (ROS2 node)     |    |                         |
+|  +---------+---------+             |    |  IoT Rules can route    |
+|  | ROS2    | IoT IPC |             |    |  to any AWS service     |
+|  | topics  | bridge  |             | MQTT |  (Timestream, S3, etc.) |
+|  v         v         |             |---->|  when needed later      |
+|  /joint_states        |             | TLS  |                         |
+|  /servo_diagnostics   |             |    |                         |
+|  (local ROS2 network) |             |    |                         |
+|  Greengrass Core v2                |    |                         |
++------------------------------------+    +-------------------------+
 ```
 
 ## Hardware
@@ -50,7 +53,10 @@ Single component that:
 - Initializes SO-101 via LeRobot Python API (`SO101Follower`)
 - Reads all sensor registers at configurable rate (default: 10Hz)
 - Publishes JSON to IoT Core via Greengrass IPC
-- No ROS2, no Docker — just Python + LeRobot + awsiotsdk
+- Also a ROS2 node publishing standard messages for local ROS2 ecosystem:
+  - `/joint_states` (sensor_msgs/JointState) — position (rad), velocity (rad/s), effort (load)
+  - `/servo_diagnostics` (diagnostic_msgs/DiagnosticArray) — temperature and current per servo
+- Graceful fallback: if ROS2 is not installed, continues with IoT Core-only publishing
 
 ### 2. Greengrass Core v2 (on robot host)
 
@@ -81,6 +87,19 @@ Single component that:
   }
 }
 ```
+
+### ROS2 Topics
+
+The component publishes to standard ROS2 topics, available to any ROS2 node on the local network:
+
+| Topic | Message Type | Content |
+|---|---|---|
+| `/joint_states` | `sensor_msgs/JointState` | Position (rad), velocity (rad/s), effort (load) for all 6 joints |
+| `/servo_diagnostics` | `diagnostic_msgs/DiagnosticArray` | Temperature and current per servo, with WARN level if temp > 50°C |
+
+These topics follow ROS2 conventions and are compatible with tools like `rviz2`, `rqt`, and Omniverse Isaac Sim.
+
+ROS2 is optional — if not installed, the component falls back to IoT Core-only publishing.
 
 ## AWS Services
 
