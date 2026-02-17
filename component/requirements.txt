@@ -7,5 +7,5 @@ pyserial>=3.5
 # - diagnostic_msgs
 # - builtin_interfaces
 #
-# Install ROS2 Humble: https://docs.ros.org/en/humble/Installation.html
+# Install ROS2 (Humble/Jazzy): https://docs.ros.org/en/jazzy/Installation.html
 # The component falls back to non-ROS2 mode if these are not available.

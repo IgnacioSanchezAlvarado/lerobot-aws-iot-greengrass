@@ -145,13 +145,13 @@ export class LeRobotIotStack extends cdk.Stack {
             Lifecycle: {
               Install: {
                 Script: [
-                  'source /opt/ros/${ROS_DISTRO:-humble}/setup.bash 2>/dev/null || true',
+                  `source /opt/ros/\${ROS_DISTRO:-${config.ros2?.distro ?? 'jazzy'}}/setup.bash 2>/dev/null || true`,
                   'pip3 install -r {artifacts:decompressedPath}/requirements.txt',
                 ].join('\n'),
               },
               Run: {
                 Script: [
-                  'source /opt/ros/${ROS_DISTRO:-humble}/setup.bash 2>/dev/null || echo "ROS2 not found, running without ROS2 support"',
+                  `source /opt/ros/\${ROS_DISTRO:-${config.ros2?.distro ?? 'jazzy'}}/setup.bash 2>/dev/null || echo "ROS2 not found, running without ROS2 support"`,
                   'export GG_DEVICE_ID="{configuration:/deviceId}"',
                   'export GG_TOPIC_PREFIX="{configuration:/topicPrefix}"',
                   'export GG_POLLING_RATE_HZ="{configuration:/pollingRateHz}"',

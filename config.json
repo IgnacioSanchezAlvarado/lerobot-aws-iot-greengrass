@@ -16,7 +16,7 @@
     "nodeName": "lerobot_telemetry",
     "jointStatesTopic": "/joint_states",
     "servoDiagnosticsTopic": "/servo_diagnostics",
-    "distro": "humble"
+    "distro": "jazzy"
   },
   "greengrass": {
     "nucleusVersion": "2.14.2"

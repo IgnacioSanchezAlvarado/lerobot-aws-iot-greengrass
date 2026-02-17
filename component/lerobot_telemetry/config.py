@@ -52,7 +52,7 @@ class ComponentConfig:
     ros2_node_name: str = "lerobot_telemetry"
     ros2_joint_states_topic: str = "/joint_states"
     ros2_servo_diagnostics_topic: str = "/servo_diagnostics"
-    ros2_distro: str = "humble"
+    ros2_distro: str = "jazzy"
 
 
 def load_config() -> ComponentConfig:
@@ -82,7 +82,7 @@ def load_config() -> ComponentConfig:
     parser.add_argument("--ros2-node-name", help="ROS2 node name")
     parser.add_argument("--ros2-joint-states-topic", help="ROS2 joint_states topic")
     parser.add_argument("--ros2-servo-diagnostics-topic", help="ROS2 servo diagnostics topic")
-    parser.add_argument("--ros2-distro", help="ROS2 distribution (e.g., humble)")
+    parser.add_argument("--ros2-distro", help="ROS2 distribution (e.g., humble, jazzy)")
 
     args = parser.parse_args()
 
@@ -99,7 +99,7 @@ def load_config() -> ComponentConfig:
     ros2_node_name = args.ros2_node_name or os.getenv("GG_ROS2_NODE_NAME", "lerobot_telemetry")
     ros2_joint_states_topic = args.ros2_joint_states_topic or os.getenv("GG_ROS2_JOINT_STATES_TOPIC", "/joint_states")
     ros2_servo_diagnostics_topic = args.ros2_servo_diagnostics_topic or os.getenv("GG_ROS2_SERVO_DIAGNOSTICS_TOPIC", "/servo_diagnostics")
-    ros2_distro = args.ros2_distro or os.getenv("GG_ROS2_DISTRO", "humble")
+    ros2_distro = args.ros2_distro or os.getenv("GG_ROS2_DISTRO", "jazzy")
 
     return ComponentConfig(
         device_id=device_id,

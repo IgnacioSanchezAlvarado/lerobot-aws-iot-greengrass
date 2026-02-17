@@ -109,8 +109,8 @@ if [[ -n "${ROS2_DISTRO}" ]]; then
   success "ROS2 ${ROS2_DISTRO} found at /opt/ros/${ROS2_DISTRO}"
 else
   warn "ROS2 not found. The telemetry component will run without ROS2 support."
-  warn "To install ROS2 Humble (recommended):"
-  warn "  https://docs.ros.org/en/humble/Installation.html"
+  warn "To install ROS2 (Humble or Jazzy):"
+  warn "  https://docs.ros.org/en/jazzy/Installation.html"
   warn ""
   warn "ROS2 enables local topic publishing for digital twin and simulation use cases."
   warn "The component will still publish telemetry to IoT Core without ROS2."

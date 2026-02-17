@@ -10,7 +10,7 @@ Stream servo sensor data from a LeRobot SO-101 robotic arm to AWS IoT Core via G
 - Java 11+ (for Greengrass installer)
 - Python 3.12 (for component runtime)
 - LeRobot SO-101 arm connected via USB serial (for device setup)
-- ROS2 Humble (optional, for local ROS2 topic publishing) — [Installation guide](https://docs.ros.org/en/humble/Installation.html)
+- ROS2 Humble or Jazzy (optional, for local ROS2 topic publishing) — set distro in config.json
 
 ## Configuration
 
@@ -100,7 +100,7 @@ sudo tail -f /greengrass/v2/logs/com.lerobot.telemetry.log
 The component publishes ROS2 topics on the default DDS domain. From another terminal on the same machine:
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash  # or humble, matching your installation
 
 ros2 topic list
 # Should show /joint_states and /servo_diagnostics
