@@ -79,7 +79,7 @@ class ConsolePublisher:
 class Ros2Publisher:
     """Publishes telemetry to ROS2 topics (JointState and DiagnosticArray)."""
 
-    def __init__(self, node, joint_states_topic: str, servo_diagnostics_topic: str):
+    def __init__(self, node, joint_states_topic: str, servo_diagnostics_topic: str, temp_warning_threshold: int = 50):
         """
         Initialize ROS2 publishers.
 
@@ -87,11 +87,13 @@ class Ros2Publisher:
             node: rclpy.node.Node instance
             joint_states_topic: Topic for JointState messages
             servo_diagnostics_topic: Topic for DiagnosticArray messages
+            temp_warning_threshold: Temperature warning threshold in Celsius (default: 50)
         """
         if not ROS2_AVAILABLE:
             raise ImportError("ROS2 message types not available (rclpy not installed)")
 
         self.node = node
+        self.temp_warning_threshold = temp_warning_threshold
         self.joint_pub = node.create_publisher(JointState, joint_states_topic, 10)
         self.diag_pub = node.create_publisher(DiagnosticArray, servo_diagnostics_topic, 10)
         logger.info(f"Initialized ROS2 publishers: joint_states={joint_states_topic}, diagnostics={servo_diagnostics_topic}")
@@ -153,22 +155,28 @@ class Ros2Publisher:
 
             temp = joint_data.get("temp", 0)
             current = joint_data.get("current", 0)
+            voltage = joint_data.get("voltage", 0)
+            hw_status = joint_data.get("status", 0)
+            moving = joint_data.get("moving", 0)
 
             status = DiagnosticStatus()
             status.name = f"servo/{joint_name}"
 
             # Set level and message based on temperature
-            if temp > 50:
+            if temp > self.temp_warning_threshold:
                 status.level = DiagnosticStatus.WARN
                 status.message = "High temperature"
             else:
                 status.level = DiagnosticStatus.OK
                 status.message = "OK"
 
-            # Add temperature and current as key-value pairs
+            # Add temperature, current, voltage, status, and moving as key-value pairs
             status.values = [
                 KeyValue(key="temperature", value=str(temp)),
-                KeyValue(key="current", value=str(current))
+                KeyValue(key="current", value=str(current)),
+                KeyValue(key="voltage", value=str(voltage)),
+                KeyValue(key="status", value=str(hw_status)),
+                KeyValue(key="moving", value=str(moving)),
             ]
 
             msg.status.append(status)

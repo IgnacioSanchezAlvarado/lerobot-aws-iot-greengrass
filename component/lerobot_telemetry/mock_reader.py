@@ -65,6 +65,9 @@ class MockSensorReader:
                 "load": load,
                 "temp": temp,
                 "current": current,
+                "voltage": round(random.uniform(6.0, 8.4), 1),
+                "status": 0,
+                "moving": random.choice([0, 1]),
             }
 
         return {

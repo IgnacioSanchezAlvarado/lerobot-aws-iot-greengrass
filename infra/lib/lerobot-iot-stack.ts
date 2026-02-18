@@ -30,6 +30,7 @@ export class LeRobotIotStack extends cdk.Stack {
       policyDocument: {
         Version: '2012-10-17',
         Statement: [
+          // Connect with certificate-based auth
           {
             Effect: 'Allow',
             Action: ['iot:Connect'],
@@ -40,25 +41,58 @@ export class LeRobotIotStack extends cdk.Stack {
               },
             },
           },
+          // Publish: telemetry data + Greengrass system topics
           {
             Effect: 'Allow',
             Action: ['iot:Publish'],
-            Resource: `arn:aws:iot:${this.region}:${this.account}:topic/${config.iot.topicPrefix}/${config.iot.deviceId}/*`,
+            Resource: [
+              `arn:aws:iot:${this.region}:${this.account}:topic/${config.iot.topicPrefix}/${config.iot.deviceId}/*`,
+              `arn:aws:iot:${this.region}:${this.account}:topic/$aws/things/${thingName}/*`,
+            ],
           },
+          // Subscribe: telemetry data + Greengrass system topics
           {
             Effect: 'Allow',
             Action: ['iot:Subscribe'],
-            Resource: `arn:aws:iot:${this.region}:${this.account}:topicfilter/${config.iot.topicPrefix}/${config.iot.deviceId}/*`,
+            Resource: [
+              `arn:aws:iot:${this.region}:${this.account}:topicfilter/${config.iot.topicPrefix}/${config.iot.deviceId}/*`,
+              `arn:aws:iot:${this.region}:${this.account}:topicfilter/$aws/things/${thingName}/*`,
+            ],
           },
+          // Receive: telemetry data + Greengrass system topics
           {
             Effect: 'Allow',
             Action: ['iot:Receive'],
-            Resource: `arn:aws:iot:${this.region}:${this.account}:topic/${config.iot.topicPrefix}/${config.iot.deviceId}/*`,
+            Resource: [
+              `arn:aws:iot:${this.region}:${this.account}:topic/${config.iot.topicPrefix}/${config.iot.deviceId}/*`,
+              `arn:aws:iot:${this.region}:${this.account}:topic/$aws/things/${thingName}/*`,
+            ],
           },
+          // Greengrass: get thing shadow for deployments
+          {
+            Effect: 'Allow',
+            Action: [
+              'iot:GetThingShadow',
+              'iot:UpdateThingShadow',
+              'iot:DeleteThingShadow',
+            ],
+            Resource: `arn:aws:iot:${this.region}:${this.account}:thing/${thingName}`,
+          },
+          // Token exchange for temporary credentials
           {
             Effect: 'Allow',
             Action: ['iot:AssumeRoleWithCertificate'],
             Resource: `arn:aws:iot:${this.region}:${this.account}:rolealias/${thingName}-role-alias`,
+          },
+          // Greengrass data plane: resolve and download components
+          {
+            Effect: 'Allow',
+            Action: [
+              'greengrass:GetComponentVersionArtifact',
+              'greengrass:ResolveComponentCandidates',
+              'greengrass:GetDeploymentConfiguration',
+            ],
+            Resource: '*',
           },
         ],
       },
@@ -77,7 +111,18 @@ export class LeRobotIotStack extends cdk.Stack {
     cdk.Tags.of(tokenExchangeRole).add('Project', config.project.name);
     cdk.Tags.of(tokenExchangeRole).add('Environment', config.project.environment);
 
-    // Add inline policy for S3 access to CDK bootstrap bucket
+    // Add inline policy for Greengrass component resolution and S3 artifact access
+    tokenExchangeRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'greengrass:ResolveComponentCandidates',
+          'greengrass:GetComponentVersionArtifact',
+          'greengrass:GetDeploymentConfiguration',
+        ],
+        resources: ['*'],
+      })
+    );
     tokenExchangeRole.addToPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -115,12 +160,16 @@ export class LeRobotIotStack extends cdk.Stack {
             pollingRateHz: config.component.pollingRateHz,
             topicPrefix: config.iot.topicPrefix,
             deviceId: config.iot.deviceId,
-            serialPort: '/dev/ttyUSB0',
-            mockMode: 'false',
+            serialPort: config.component.serialPort,
+            mockMode: String(config.component.mockMode),
+            serialBaudRate: config.component.serialBaudRate,
+            serialTimeout: config.component.serialTimeout,
+            tempWarningThreshold: config.component.tempWarningThreshold,
             ros2NodeName: config.ros2.nodeName,
             ros2JointStatesTopic: config.ros2.jointStatesTopic,
             ros2ServoDiagnosticsTopic: config.ros2.servoDiagnosticsTopic,
             ros2Distro: config.ros2.distro,
+            mode: config.component.mode,
             accessControl: {
               'aws.greengrass.ipc.mqttproxy': {
                 [`${config.component.name}:pubsub:1`]: {
@@ -145,26 +194,38 @@ export class LeRobotIotStack extends cdk.Stack {
             Lifecycle: {
               Install: {
                 Script: [
-                  `source /opt/ros/\${ROS_DISTRO:-${config.ros2?.distro ?? 'jazzy'}}/setup.bash 2>/dev/null || true`,
-                  'pip3 install -r {artifacts:decompressedPath}/requirements.txt',
+                  `. /opt/ros/\${ROS_DISTRO:-${config.ros2?.distro ?? 'jazzy'}}/setup.sh 2>/dev/null || true`,
+                  '# CDK Asset ZIP extracts into a hash subdirectory',
+                  'COMP_DIR=$(find {artifacts:decompressedPath} -name requirements.txt -exec dirname {} \\;)',
+                  'python3 -m venv --system-site-packages {work:path}/venv',
+                  '{work:path}/venv/bin/pip install -r "$COMP_DIR/requirements.txt"',
+                  '# Store resolved path for Run lifecycle',
+                  'echo "$COMP_DIR" > {work:path}/comp_dir.txt',
                 ].join('\n'),
               },
               Run: {
                 Script: [
-                  `source /opt/ros/\${ROS_DISTRO:-${config.ros2?.distro ?? 'jazzy'}}/setup.bash 2>/dev/null || echo "ROS2 not found, running without ROS2 support"`,
+                  `. /opt/ros/\${ROS_DISTRO:-${config.ros2?.distro ?? 'jazzy'}}/setup.sh 2>/dev/null || echo "ROS2 not found, running without ROS2 support"`,
+                  'COMP_DIR=$(cat {work:path}/comp_dir.txt)',
                   'export GG_DEVICE_ID="{configuration:/deviceId}"',
                   'export GG_TOPIC_PREFIX="{configuration:/topicPrefix}"',
                   'export GG_POLLING_RATE_HZ="{configuration:/pollingRateHz}"',
                   'export GG_SERIAL_PORT="{configuration:/serialPort}"',
                   'export GG_MOCK_MODE="{configuration:/mockMode}"',
+                  'export GG_SERIAL_BAUDRATE="{configuration:/serialBaudRate}"',
+                  'export GG_SERIAL_TIMEOUT="{configuration:/serialTimeout}"',
+                  'export GG_TEMP_WARNING_THRESHOLD="{configuration:/tempWarningThreshold}"',
                   'export GG_ROS2_NODE_NAME="{configuration:/ros2NodeName}"',
                   'export GG_ROS2_JOINT_STATES_TOPIC="{configuration:/ros2JointStatesTopic}"',
                   'export GG_ROS2_SERVO_DIAGNOSTICS_TOPIC="{configuration:/ros2ServoDiagnosticsTopic}"',
                   'export GG_ROS2_DISTRO="{configuration:/ros2Distro}"',
+                  'export GG_MODE="{configuration:/mode}"',
                   'export ROS_DISTRO="{configuration:/ros2Distro}"',
-                  'export PYTHONPATH="{artifacts:decompressedPath}:$PYTHONPATH"',
-                  'cd {artifacts:decompressedPath}',
-                  'python3 -u -m lerobot_telemetry',
+                  '# Disable Fast DDS shared memory transport so cross-user DDS discovery works',
+                  'export FASTDDS_BUILTIN_TRANSPORTS=UDPv4',
+                  'export PYTHONPATH="$COMP_DIR:$PYTHONPATH"',
+                  'cd "$COMP_DIR"',
+                  '{work:path}/venv/bin/python3 -u -m lerobot_telemetry',
                 ].join('\n'),
               },
             },
@@ -204,11 +265,15 @@ export class LeRobotIotStack extends cdk.Stack {
               pollingRateHz: config.component.pollingRateHz,
               topicPrefix: config.iot.topicPrefix,
               deviceId: config.iot.deviceId,
-              serialPort: '/dev/ttyUSB0',
+              serialPort: config.component.serialPort,
+              serialBaudRate: config.component.serialBaudRate,
+              serialTimeout: config.component.serialTimeout,
+              tempWarningThreshold: config.component.tempWarningThreshold,
               ros2NodeName: config.ros2.nodeName,
               ros2JointStatesTopic: config.ros2.jointStatesTopic,
               ros2ServoDiagnosticsTopic: config.ros2.servoDiagnosticsTopic,
               ros2Distro: config.ros2.distro,
+              mode: config.component.mode,
             }),
           },
         },

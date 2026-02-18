@@ -1,7 +1,8 @@
 {
   "project": {
     "name": "lerobot-iot",
-    "environment": "dev"
+    "environment": "dev",
+    "region": "us-east-1"
   },
   "iot": {
     "deviceId": "arm-001",
@@ -9,8 +10,14 @@
   },
   "component": {
     "name": "com.lerobot.telemetry",
-    "version": "2.0.0",
-    "pollingRateHz": 10
+    "version": "2.2.0",
+    "pollingRateHz": 10,
+    "serialPort": "/dev/ttyACM2",
+    "mockMode": false,
+    "serialBaudRate": 1000000,
+    "serialTimeout": 0.1,
+    "tempWarningThreshold": 50,
+    "mode": "ros2"
   },
   "ros2": {
     "nodeName": "lerobot_telemetry",
@@ -19,6 +26,9 @@
     "distro": "jazzy"
   },
   "greengrass": {
-    "nucleusVersion": "2.14.2"
+    "nucleusVersion": "2.16.1"
+  },
+  "infrastructure": {
+    "stackName": "LeRobotIotStack"
   }
 }

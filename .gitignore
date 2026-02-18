@@ -14,9 +14,12 @@ venv/
 dist/
 build/
 cdk.out/
+.aws-sam/
 *.js.map
 *.d.ts
 !jest.config.ts
+.next/
+out/
 
 # IDE and editor
 .vscode/
@@ -42,6 +45,7 @@ aws-exports.js
 CLAUDE.md
 .claude/
 .claudeignore
+.claude_output
 
 # Logs
 *.log
@@ -64,5 +68,11 @@ desktop.ini
 # CDK specific
 cdk.context.json
 
-# Plans (internal development notes)
+# Docker
+docker-compose.override.yml
+
+# Plans and metaproject files (internal development notes)
 plans/
+ARCHITECTURE.md
+project_description.txt
+*_HANDOFF.md

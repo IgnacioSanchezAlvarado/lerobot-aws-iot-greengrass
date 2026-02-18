@@ -20,16 +20,20 @@ class FeetechMotorsBus:
     sync_read, but functionally equivalent for a POC).
     """
 
-    def __init__(self, port: str, motors: Dict[str, int]):
+    def __init__(self, port: str, motors: Dict[str, int], baudrate: int = 1000000, timeout: float = 0.1):
         """
         Initialize the motor bus.
 
         Args:
             port: Serial port path (e.g., /dev/ttyUSB0)
             motors: Dict mapping motor name to motor ID {name: id}
+            baudrate: Serial baud rate (default: 1000000)
+            timeout: Serial read timeout in seconds (default: 0.1)
         """
         self.port = port
         self.motors = motors  # {name: id}
+        self.baudrate = baudrate
+        self.timeout = timeout
         self.serial = None
         self.is_connected = False
 
@@ -42,8 +46,8 @@ class FeetechMotorsBus:
         """
         self.serial = serial.Serial(
             port=self.port,
-            baudrate=1000000,  # 1 Mbps for STS3215
-            timeout=0.1,
+            baudrate=self.baudrate,
+            timeout=self.timeout,
             bytesize=serial.EIGHTBITS,
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,

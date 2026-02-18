@@ -8,6 +8,8 @@ Scripts to provision, test, and teardown LeRobot SO-101 devices with AWS IoT Gre
 2. AWS CLI configured with appropriate credentials
 3. Root/sudo access on the device
 
+**Note:** The setup script requires AWS credentials to retrieve stack outputs. Use `sudo -E` to preserve your environment variables (including AWS credentials), or the script will auto-detect credentials from the invoking user's AWS CLI profile.
+
 ## Files
 
 ### `common.sh`
@@ -21,7 +23,7 @@ Main provisioning script. Installs and configures Greengrass on the device.
 
 **Usage:**
 ```bash
-sudo ./setup-device.sh
+sudo -E ./setup-device.sh
 ```
 
 **What it does:**
@@ -76,7 +78,7 @@ On your robot device (with SO-101 arm connected):
 chmod +x *.sh
 
 # 2. Provision device
-sudo ./setup-device.sh
+sudo -E ./setup-device.sh
 
 # 3. Wait a few minutes for component deployment
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # setup-device.sh - Provision LeRobot device with AWS IoT Greengrass v2
-# Must be run as root: sudo ./setup-device.sh
+# Must be run as root: sudo -E ./setup-device.sh
 
 set -euo pipefail
 
@@ -10,8 +10,31 @@ source "${SCRIPT_DIR}/common.sh"
 
 # Root check
 if [[ $EUID -ne 0 ]]; then
-  error "This script must be run as root. Use: sudo $0"
+  error "This script must be run as root. Use: sudo -E $0"
   exit 1
+fi
+
+# Ensure AWS credentials are available under sudo
+if ! aws sts get-caller-identity &>/dev/null; then
+  # Try to load credentials from the invoking user's environment
+  SUDO_USER_HOME=$(eval echo "~${SUDO_USER:-}")
+  if [[ -n "$SUDO_USER_HOME" && -f "$SUDO_USER_HOME/.aws/credentials" ]]; then
+    export AWS_SHARED_CREDENTIALS_FILE="$SUDO_USER_HOME/.aws/credentials"
+    export AWS_CONFIG_FILE="$SUDO_USER_HOME/.aws/config"
+    # Also inherit region if set
+    if [[ -z "${AWS_REGION:-}" && -z "${AWS_DEFAULT_REGION:-}" ]]; then
+      REGION=$(aws configure get region 2>/dev/null || true)
+      [[ -n "$REGION" ]] && export AWS_REGION="$REGION"
+    fi
+    if ! aws sts get-caller-identity &>/dev/null; then
+      error "AWS credentials not available. Run with: sudo -E $0"
+      exit 1
+    fi
+    info "Using AWS credentials from ${SUDO_USER} user profile"
+  else
+    error "AWS credentials not available. Run with: sudo -E $0"
+    exit 1
+  fi
 fi
 
 info "Starting LeRobot device provisioning..."
@@ -51,6 +74,11 @@ fi
 
 if ! check_command pip3; then
   MISSING_DEPS+=("python3-pip")
+fi
+
+# python3-venv is required for component virtualenv on Ubuntu 24.04+ (PEP 668)
+if ! python3 -m venv --help &>/dev/null; then
+  MISSING_DEPS+=("python3-venv")
 fi
 
 if ! check_command curl; then

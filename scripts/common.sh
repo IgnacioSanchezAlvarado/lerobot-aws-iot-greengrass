@@ -3,9 +3,22 @@
 
 set -euo pipefail
 
+# Determine project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Constants
 GREENGRASS_ROOT="/greengrass/v2"
+
+# Read stack name from config.json with fallback
 STACK_NAME="LeRobotIotStack"
+if [[ -f "$PROJECT_ROOT/config.json" ]]; then
+  if command -v jq &>/dev/null; then
+    STACK_NAME=$(jq -r '.infrastructure.stackName // "LeRobotIotStack"' "$PROJECT_ROOT/config.json" 2>/dev/null || echo "LeRobotIotStack")
+  elif command -v python3 &>/dev/null; then
+    STACK_NAME=$(python3 -c "import json; print(json.load(open('$PROJECT_ROOT/config.json')).get('infrastructure', {}).get('stackName', 'LeRobotIotStack'))" 2>/dev/null || echo "LeRobotIotStack")
+  fi
+fi
 
 # Color codes
 RED='\033[0;31m'

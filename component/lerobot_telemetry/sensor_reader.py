@@ -24,7 +24,12 @@ class SensorReader:
         self.config = config
         # Create motor_names -> motor_id mapping for FeetechMotorsBus
         self.motors = MOTOR_IDS.copy()
-        self.bus = FeetechMotorsBus(port=config.serial_port, motors=self.motors)
+        self.bus = FeetechMotorsBus(
+            port=config.serial_port,
+            motors=self.motors,
+            baudrate=config.serial_baudrate,
+            timeout=config.serial_timeout
+        )
 
     def connect(self):
         """Open serial connection to servo bus."""
@@ -67,6 +72,9 @@ class SensorReader:
                 "load": register_data["Present_Load"].get(joint_name, 0),
                 "temp": register_data["Present_Temperature"].get(joint_name, 0),
                 "current": register_data["Present_Current"].get(joint_name, 0),
+                "voltage": register_data["Present_Voltage"].get(joint_name, 0),
+                "status": register_data["Status"].get(joint_name, 0),
+                "moving": register_data["Moving"].get(joint_name, 0),
             }
 
         return {
