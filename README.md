@@ -2,6 +2,12 @@
 
 Stream servo sensor data from a LeRobot SO-101 robotic arm to AWS IoT Core via Greengrass v2. The component supports three modes: (1) direct serial access to read servo registers, (2) ROS2 subscriber mode that consumes JointState and DiagnosticArray topics from the lerobot-ros2-teleoperate wrapper, and (3) mock mode for testing without hardware. In ROS2 mode, the component also publishes ROS2 topics for local ecosystem integration.
 
+<p align="center">
+  <img src="images/ros-2.png" alt="ROS2 JointState topic output" width="48%">
+  &nbsp;
+  <img src="images/iot_mqtt.png" alt="AWS IoT Core MQTT telemetry" width="48%">
+</p>
+
 ## Prerequisites
 
 - AWS CLI configured with appropriate credentials
