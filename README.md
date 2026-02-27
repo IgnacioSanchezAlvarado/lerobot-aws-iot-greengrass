@@ -31,6 +31,15 @@ The component supports three modes (set via `component.mode` in config.json):
 
 ### ROS2 Mode Setup
 
+**Important:** ROS 2 Jazzy requires Python 3.12. If you use a conda environment for lerobot, make sure it is created with Python 3.12, otherwise `rclpy` will fail to import the C extensions:
+
+```bash
+conda create -n lerobot-ros2 python=3.12 -y
+conda activate lerobot-ros2
+pip install lerobot
+source /opt/ros/jazzy/setup.bash
+```
+
 When using `mode: "ros2"`, run one of the wrapper scripts to publish ROS2 topics:
 
 #### Teleoperation
