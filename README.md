@@ -1,6 +1,6 @@
 # LeRobot SO-101 AWS IoT Integration
 
-Stream servo sensor data from a LeRobot SO-101 robotic arm to AWS IoT Core via Greengrass v2. The component supports three modes: (1) direct serial access to read servo registers, (2) ROS2 subscriber mode that consumes JointState and DiagnosticArray topics from the lerobot-ros2-teleoperate wrapper, and (3) mock mode for testing without hardware. In ROS2 mode, the component also publishes ROS2 topics for local ecosystem integration.
+Stream servo sensor data from a LeRobot SO-101 robotic arm to AWS IoT Core via Greengrass v2. The component supports three modes: (1) direct serial access to read servo registers, (2) ROS2 subscriber mode that consumes JointState and DiagnosticArray topics from the ROS2 wrapper scripts (teleoperate or inference), and (3) mock mode for testing without hardware. In ROS2 mode, the component also publishes ROS2 topics for local ecosystem integration.
 
 <p align="center">
   <img src="images/ros-2.png" alt="ROS2 JointState topic output" width="55%">
@@ -25,13 +25,15 @@ The component supports three modes (set via `component.mode` in config.json):
 
 1. **serial** - Direct hardware access. Component reads servo registers (position, velocity, load, temp, voltage, current, status, moving) via USB serial at configured polling rate.
 
-2. **ros2** - Subscriber mode. Component subscribes to `/joint_states` and `/servo_diagnostics` ROS2 topics published by the `lerobot-ros2-teleoperate.py` wrapper script. Use this mode when running lerobot teleoperation and you want Greengrass to forward telemetry to AWS IoT Core.
+2. **ros2** - Subscriber mode. Component subscribes to `/joint_states` and `/servo_diagnostics` ROS2 topics published by either the teleoperate or inference wrapper script. Use this mode when running lerobot teleoperation or policy inference and you want Greengrass to forward telemetry to AWS IoT Core.
 
 3. **mock** - Testing mode. Component generates synthetic servo data without requiring hardware. Useful for development and integration testing.
 
 ### ROS2 Mode Setup
 
-When using `mode: "ros2"`, you must run the wrapper script to publish ROS2 topics:
+When using `mode: "ros2"`, run one of the wrapper scripts to publish ROS2 topics:
+
+#### Teleoperation
 
 ```bash
 python3 scripts/lerobot-ros2-teleoperate.py \
@@ -41,13 +43,29 @@ python3 scripts/lerobot-ros2-teleoperate.py \
     --teleop.port=/dev/ttyACM1
 ```
 
-The wrapper script:
-- Monkey-patches lerobot's teleoperation loop
-- Publishes JointState messages to `/joint_states` at ~60Hz
-- Publishes DiagnosticArray messages to `/servo_diagnostics` at ~10Hz
-- Passes all lerobot-teleoperate arguments unchanged
+The wrapper scripts:
+- Monkey-patch lerobot's control loop (teleoperation or record)
+- Publish JointState messages to `/joint_states` at ~60Hz
+- Publish DiagnosticArray messages to `/servo_diagnostics` at ~10Hz
+- Pass all lerobot CLI arguments unchanged
 
 The Greengrass component subscribes to both topics, merges the data, and forwards to AWS IoT Core.
+
+#### Inference / Policy Evaluation
+
+To stream telemetry while running a trained policy:
+
+```bash
+python3 scripts/lerobot-ros2-inference.py \
+    --robot.type=so101_follower \
+    --robot.port=/dev/ttyACM0 \
+    --robot.id=my_follower_arm \
+    --dataset.repo_id=${HF_USER}/eval_so101 \
+    --dataset.single_task="Pick up the block" \
+    --policy.path=${HF_USER}/my_policy
+```
+
+This wrapper monkey-patches lerobot's `record_loop` to publish the same ROS2 topics during inference. All `lerobot-record` arguments are supported.
 
 ## Configuration
 
